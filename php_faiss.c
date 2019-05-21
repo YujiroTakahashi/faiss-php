@@ -205,14 +205,13 @@ PHP_METHOD(faiss, search)
 		return;
 	}
 
-
 	ht = Z_ARRVAL_P(array);
 	size = zend_hash_num_elements(ht);
 
 	query = malloc(size * sizeof(float));
 	for (idx=0; idx<size; idx++) {
 		zval *value = zend_hash_get_current_data(ht);
-		xb[idx] = (float) zval_get_double(value);
+		distances[idx] = (float) zval_get_double(value);
 		zend_hash_move_forward(ht);
 	}
 
@@ -229,8 +228,8 @@ PHP_METHOD(faiss, search)
 
 		size = k * number;
 		for (idx=0; idx<size; idx++) {
-			add_index_double(distVal, idx, distances[idx]);
-			add_index_long(labelVal, idx, labels[idx]);
+			add_index_double(&distVal, idx, distances[idx]);
+			add_index_long(&labelVal, idx, labels[idx]);
 		}
 
 		zend_hash_str_add(Z_ARRVAL_P(return_value), "distances", sizeof("distances")-1, &distVal);
@@ -256,13 +255,111 @@ PHP_METHOD(faiss, reset)
 }
 /* }}} */
 
-
-/* {{{ proto string faiss::reconstruct()
+/* {{{ proto string faiss::reconstruct(long key, array recons)
  */
 PHP_METHOD(faiss, reconstruct)
 {
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
+	zend_long key;
+	zval *array;
+
+	faiss_obj = Z_FAISS_P(object);
+
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "lz", &key, &array)) {
+		return;
+	}
+
+	if (Z_TYPE_P(array) == IS_ARRAY) {
+		float *recons;
+		int idx, size;
+		HashTable *ht = Z_ARRVAL_P(array);
+		size = zend_hash_num_elements(ht);
+
+		recons = malloc(size * sizeof(float));
+		for (idx=0; idx<size; idx++) {
+			zval *value = zend_hash_get_current_data(ht);
+			recons[idx] = (float) zval_get_double(value);
+			zend_hash_move_forward(ht);
+		}
+
+		FAISS_TRY(faiss_Index_reconstruct(faiss_obj->faiss, key, recons));
+		free(recons);
+	}
+}
+/* }}} */
+
+/* {{{ proto string faiss::writeIndex(string filename)
+ */
+PHP_METHOD(faiss, writeIndex)
+{
+	php_faiss_object *faiss_obj;
+	zval *object = getThis();
+	char *fname;
+	size_t fname_len = 0;
+
+	faiss_obj = Z_FAISS_P(object);
+
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &fname, &fname_len)) {
+		return;
+	}
+
+	FAISS_TRY(faiss_write_index_fname(faiss_obj->faiss, fname));
+}
+/* }}} */
+
+/* {{{ proto string faiss::readIndex(string filename)
+ */
+PHP_METHOD(faiss, readIndex)
+{
+	php_faiss_object *faiss_obj;
+	zval *object = getThis();
+	char *fname;
+	size_t fname_len = 0;
+
+	faiss_obj = Z_FAISS_P(object);
+
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &fname, &fname_len)) {
+		return;
+	}
+
+	FAISS_TRY(faiss_read_index_fname(faiss_obj->faiss, FAISS_C_IO_FLAG_ONDISK_SAME_DIR, fname));
+}
+/* }}} */
+
+/* {{{ proto string faiss::importIndex(string data)
+ */
+PHP_METHOD(faiss, importIndex)
+{
+	php_faiss_object *faiss_obj;
+	zval *object = getThis();
+	char *data;
+	size_t data_len = 0, size = 0;
+	FILE *fp;
+
+	faiss_obj = Z_FAISS_P(object);
+
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &data, &data_len)) {
+		return;
+	}
+
+	size = ('\0' == data[data_len]) ? data_len - 1 : data_len;
+	fp = fmemopen((void*)data, size, "rb");
+
+	FAISS_TRY(faiss_read_index(fp, FAISS_C_IO_FLAG_MMAP, &faiss_obj->faiss));
+	fclose(fp);
+}
+/* }}} */
+
+/* {{{ proto string faiss::exportIndex(string filename)
+ */
+PHP_METHOD(faiss, exportIndex)
+{
+	php_faiss_object *faiss_obj;
+	zval *object = getThis();
+	char *data;
+	size_t size = 0;
+	FILE *fp;
 
 	faiss_obj = Z_FAISS_P(object);
 
@@ -270,9 +367,17 @@ PHP_METHOD(faiss, reconstruct)
 		return;
 	}
 
-	FAISS_TRY(faiss_Index_reconstruct(faiss_obj->faiss));
+	fp = open_memstream(data, &size);
+
+	FAISS_TRY(faiss_write_index(faiss_obj->faiss, fp));
+
+	ZVAL_STRINGL(return_value, data, size);
+
+	fclose(fp);
+	free(data);
 }
 /* }}} */
+
 
 
 /* {{{ arginfo */
@@ -289,7 +394,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_ctor, 0, 0, 1)
 	ZEND_ARG_INFO(0, metric)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_add, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_vector, 0, 0, 2)
 	ZEND_ARG_INFO(0, number)
 	ZEND_ARG_INFO(0, data)
 ZEND_END_ARG_INFO()
@@ -306,12 +411,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_search, 0, 0, 3)
 	ZEND_ARG_INFO(0, k)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_five, 0, 0, 2)
-	ZEND_ARG_INFO(0, dimension)
-	ZEND_ARG_INFO(0, edgeSizeForCreation)
-	ZEND_ARG_INFO(0, edgeSizeForSearch)
-	ZEND_ARG_INFO(0, distanceType)
-	ZEND_ARG_INFO(0, objectType)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_file, 0, 0, 1)
+	ZEND_ARG_INFO(0, filename)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_data, 0, 0, 1)
+	ZEND_ARG_INFO(0, data)
 ZEND_END_ARG_INFO()
 
 /* }}} */
@@ -321,13 +426,15 @@ ZEND_END_ARG_INFO()
 static zend_function_entry php_faiss_class_methods[] = {
 	PHP_ME(faiss, __construct,             arginfo_faiss_ctor,     ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(faiss, isTrained,               arginfo_faiss_void,     ZEND_ACC_PUBLIC)
-	PHP_ME(faiss, add,                     arginfo_faiss_add,      ZEND_ACC_PUBLIC)
+	PHP_ME(faiss, add,                     arginfo_faiss_vector,   ZEND_ACC_PUBLIC)
 	PHP_ME(faiss, addWithIds,              arginfo_faiss_addwids,  ZEND_ACC_PUBLIC)
 	PHP_ME(faiss, ntotal,                  arginfo_faiss_void,     ZEND_ACC_PUBLIC)
 	PHP_ME(faiss, search,                  arginfo_faiss_search,   ZEND_ACC_PUBLIC)
 	PHP_ME(faiss, reset,                   arginfo_faiss_void,     ZEND_ACC_PUBLIC)
-	PHP_ME(faiss, reconstruct,             arginfo_faiss_void,     ZEND_ACC_PUBLIC)
-	PHP_ME(faiss, importIndex,             arginfo_faiss_void,     ZEND_ACC_PUBLIC)
+	PHP_ME(faiss, reconstruct,             arginfo_faiss_vector,   ZEND_ACC_PUBLIC)
+	PHP_ME(faiss, writeIndex,              arginfo_faiss_file,     ZEND_ACC_PUBLIC)
+	PHP_ME(faiss, readIndex,               arginfo_faiss_file,     ZEND_ACC_PUBLIC)
+	PHP_ME(faiss, importIndex,             arginfo_faiss_data,     ZEND_ACC_PUBLIC)
 	PHP_ME(faiss, exportIndex,             arginfo_faiss_void,     ZEND_ACC_PUBLIC)
 
 	PHP_FE_END

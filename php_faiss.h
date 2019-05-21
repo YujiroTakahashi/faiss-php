@@ -1,9 +1,26 @@
 #ifndef PHP_FAISS_H
 #define PHP_FAISS_H
 
-#include <faiss/c_api/Index.h>
+#include "faiss/faiss_c.h"
+#include "faiss/Index_c.h"
+#include "faiss/error_c.h"
+#include "faiss/index_io_c.h"
+#include "faiss/Clustering_c.h"
+#include "faiss/AutoTune_c.h"
 
 #define PHP_FAISS_VERSION	"0.1.0"
+
+#define FAISS_C_IO_FLAG_MMAP 1
+#define FAISS_C_IO_FLAG_READ_ONLY 2
+#define FAISS_C_IO_FLAG_ONDISK_SAME_DIR 4
+
+#define FAISS_TRY(C)                                       \
+    {                                                      \
+        if (C) {                                           \
+            fprintf(stderr, "%s", faiss_get_last_error()); \
+            exit(-1);                                      \
+        }                                                  \
+    }
 
 extern zend_module_entry faiss_module_entry;
 #define phpext_faiss_ptr &faiss_module_entry
