@@ -19,6 +19,7 @@ $
 $ cd c_api
 $ make -j $(nproc)
 $ sudo cp ./libfaiss_c.so /usr/local/lib/
+$ sudo ldconfig
 ```
 
 ## Building faiss for PHP
