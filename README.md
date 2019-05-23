@@ -6,8 +6,7 @@ faiss-php is a PHP bindings for faiss.
 
 ## Requirements
 
-libfaiss
-
+libfaiss / libfaiss_c
 
 ```
 $ curl -fSL "https://github.com/facebookresearch/faiss/archive/v1.4.0.tar.gz" -o "faiss-1.4.0.tgz"
@@ -16,6 +15,10 @@ $ cd faiss-1.4.0
 $ ./configure --without-cuda --without-python 
 $ make -j $(nproc)
 $ sudo make install
+$
+$ cd c_api
+$ make -j $(nproc)
+$ sudo cp ./libfaiss_c.so /usr/local/lib/
 ```
 
 ## Building faiss for PHP
@@ -186,19 +189,30 @@ print_r($res);
 
 ```
 [
-    [distances] => [
-        [0] => 0
-        [1] => 0.3029425740242
-        [2] => 0.33269536495209
-        [3] => 0.33669653534889
-        [4] => 0.35055699944496
+    [0] => [
+        [rank] => 1
+        [distance] => 0
+        [label] => 3
     ],
-    [labels] => [
-        [0] => 3
-        [1] => 11
-        [2] => 10
-        [3] => 8
-        [4] => 9
+    [1] => [
+        [rank] => 2
+        [distance] => 0.124467253685
+        [label] => 6
+    ],
+    [2] => [
+        [rank] => 3
+        [distance] => 0.12547266483307
+        [label] => 5
+    ],
+    [3] => [
+        [rank] => 4
+        [distance] => 0.12691037356853
+        [label] => 2
+    ],
+    [4] => [
+        [rank] => 5
+        [distance] => 0.13562878966331
+        [label] => 9
     ]
 ]
 ```

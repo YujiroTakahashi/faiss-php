@@ -217,22 +217,25 @@ PHP_METHOD(faiss, search)
 
 	array_init(return_value);
 	{
-		zval distVal, labelVal;
-
-		array_init(&distVal);
-		array_init(&labelVal);
-
 		labels = malloc(k * number * sizeof(long));
 		distances = malloc(k * number * sizeof(float));
 		FAISS_TRY(faiss_Index_search(faiss_obj->faiss, number, query, k, distances, labels));
 		size = k * number;
-		for (idx=0; idx<size; idx++) {
-			add_index_double(&distVal, idx, distances[idx]);
-			add_index_long(&labelVal, idx, labels[idx]);
-		}
 
-		zend_hash_str_add(Z_ARRVAL_P(return_value), "distances", sizeof("distances")-1, &distVal);
-		zend_hash_str_add(Z_ARRVAL_P(return_value), "labels", sizeof("labels")-1, &labelVal);
+		for (idx=0; idx<size; idx++) {
+			zval rowVal, rankVal, distVal, labelVal;
+
+			ZVAL_LONG(&rankVal, idx + 1);
+			ZVAL_DOUBLE(&distVal, distances[idx]);
+			ZVAL_LONG(&labelVal, labels[idx]);
+
+			array_init(&rowVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "rank", sizeof("rank")-1, &rankVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "distance", sizeof("distance")-1, &distVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "label", sizeof("label")-1, &labelVal);
+
+			add_index_zval(return_value, idx, &rowVal);
+		}
 	}
 }
 /* }}} */
