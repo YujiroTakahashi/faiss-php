@@ -41,18 +41,18 @@ extension=faiss.so
 
 ```php
 Croco\faiss {
-	public __construct(int dimension[, string description, int metric])
-	public boolean isTrained(voiod)
-	public void add(int number, array vectors)
-	public void addWithIds(int number, array vectors, array ids)
-	public int ntotal(void)
-	public array search(int number, array query, int k)
-	public void reset(void)
-	public void reconstruct(int key, array recons)
-	public void writeIndex(string filename)
-	public void readIndex(string filename)
-	public void importIndex(string data)
-	public string exportIndex(void)
+    public __construct(int dimension[, string description, int metric])
+    public boolean isTrained(voiod)
+    public void add(int number, array vectors)
+    public void addWithIds(int number, array vectors, array ids)
+    public int ntotal(void)
+    public array search(int number, array query, int k)
+    public void reset(void)
+    public void reconstruct(int key, array recons)
+    public void writeIndex(string filename)
+    public void readIndex(string filename)
+    public void importIndex(string data)
+    public string exportIndex(void)
 }
 ```
 
@@ -190,29 +190,29 @@ print_r($res);
 ```
 [
     [0] => [
-        [rank] => 1
-        [distance] => 0
-        [label] => 3
+        [Rank] => 1
+        [ID] => 3
+        [Distance] => 0
     ],
     [1] => [
-        [rank] => 2
-        [distance] => 0.124467253685
-        [label] => 6
+        [Rank] => 2
+        [ID] => 6
+        [Distance] => 0.124467253685
     ],
     [2] => [
-        [rank] => 3
-        [distance] => 0.12547266483307
-        [label] => 5
+        [Rank] => 3
+        [ID] => 5
+        [Distance] => 0.12547266483307
     ],
     [3] => [
-        [rank] => 4
-        [distance] => 0.12691037356853
-        [label] => 2
+        [Rank] => 4
+        [ID] => 2
+        [Distance] => 0.12691037356853
     ],
     [4] => [
-        [rank] => 5
-        [distance] => 0.13562878966331
-        [label] => 9
+        [Rank] => 5
+        [ID] => 9
+        [Distance] => 0.13562878966331
     ]
 ]
 ```

@@ -230,9 +230,9 @@ PHP_METHOD(faiss, search)
 			ZVAL_LONG(&labelVal, labels[idx]);
 
 			array_init(&rowVal);
-			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "rank", sizeof("rank")-1, &rankVal);
-			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "distance", sizeof("distance")-1, &distVal);
-			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "label", sizeof("label")-1, &labelVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "Rank", sizeof("Rank")-1, &rankVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "ID", sizeof("ID")-1, &labelVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "Distance", sizeof("Distance")-1, &distVal);
 
 			add_index_zval(return_value, idx, &rowVal);
 		}
