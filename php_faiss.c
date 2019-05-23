@@ -181,7 +181,7 @@ PHP_METHOD(faiss, ntotal)
 /* }}} */
 
 
-/* {{{ proto string faiss::search(int number, array query, int k)
+/* {{{ proto array faiss::search(int number, array query, int k)
  */
 PHP_METHOD(faiss, search)
 {
@@ -211,7 +211,7 @@ PHP_METHOD(faiss, search)
 	query = malloc(size * sizeof(float));
 	for (idx=0; idx<size; idx++) {
 		zval *value = zend_hash_get_current_data(ht);
-		distances[idx] = (float) zval_get_double(value);
+		query[idx] = (float) zval_get_double(value);
 		zend_hash_move_forward(ht);
 	}
 
@@ -225,7 +225,6 @@ PHP_METHOD(faiss, search)
 		labels = malloc(k * number * sizeof(long));
 		distances = malloc(k * number * sizeof(float));
 		FAISS_TRY(faiss_Index_search(faiss_obj->faiss, number, query, k, distances, labels));
-
 		size = k * number;
 		for (idx=0; idx<size; idx++) {
 			add_index_double(&distVal, idx, distances[idx]);
@@ -238,7 +237,7 @@ PHP_METHOD(faiss, search)
 }
 /* }}} */
 
-/* {{{ proto string faiss::reset()
+/* {{{ proto void faiss::reset()
  */
 PHP_METHOD(faiss, reset)
 {
@@ -255,7 +254,7 @@ PHP_METHOD(faiss, reset)
 }
 /* }}} */
 
-/* {{{ proto string faiss::reconstruct(long key, array recons)
+/* {{{ proto void faiss::reconstruct(long key, array recons)
  */
 PHP_METHOD(faiss, reconstruct)
 {
@@ -323,7 +322,7 @@ PHP_METHOD(faiss, readIndex)
 		return;
 	}
 
-	FAISS_TRY(faiss_read_index_fname(faiss_obj->faiss, FAISS_C_IO_FLAG_ONDISK_SAME_DIR, fname));
+	FAISS_TRY(faiss_read_index_fname(fname, FAISS_C_IO_FLAG_ONDISK_SAME_DIR, &faiss_obj->faiss));
 }
 /* }}} */
 
@@ -334,7 +333,7 @@ PHP_METHOD(faiss, importIndex)
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
 	char *data;
-	size_t data_len = 0, size = 0;
+	size_t data_len = 0;
 	FILE *fp;
 
 	faiss_obj = Z_FAISS_P(object);
@@ -342,9 +341,7 @@ PHP_METHOD(faiss, importIndex)
 	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &data, &data_len)) {
 		return;
 	}
-
-	size = ('\0' == data[data_len]) ? data_len - 1 : data_len;
-	fp = fmemopen((void*)data, size, "rb");
+	fp = fmemopen((void*)data, data_len, "rb");
 
 	FAISS_TRY(faiss_read_index(fp, FAISS_C_IO_FLAG_MMAP, &faiss_obj->faiss));
 	fclose(fp);
@@ -367,10 +364,11 @@ PHP_METHOD(faiss, exportIndex)
 		return;
 	}
 
-	fp = open_memstream(data, &size);
+	fp = open_memstream(&data, &size);
 
 	FAISS_TRY(faiss_write_index(faiss_obj->faiss, fp));
 
+	fflush(fp);
 	ZVAL_STRINGL(return_value, data, size);
 
 	fclose(fp);
@@ -450,7 +448,7 @@ static void php_faiss_object_free_storage(zend_object *object) /* {{{ */
 	}
 
 	if (intern->faiss) {
-		FaissFree(intern->faiss);
+		faiss_Index_free(intern->faiss);
 		intern->faiss = NULL;
 	}
 
@@ -463,7 +461,7 @@ static zend_object *php_faiss_object_new(zend_class_entry *class_type) /* {{{ */
 	php_faiss_object *intern;
 
 	/* Allocate memory for it */
-	int faisssize = FaissSize();
+	int faisssize = FaissIndexSize();
 	intern = ecalloc(1, sizeof(php_faiss_object) + zend_object_properties_size(class_type) + faisssize);
 
 	zend_object_std_init(&intern->zo, class_type);
@@ -485,12 +483,15 @@ PHP_MINIT_FUNCTION(faiss)
 	memcpy(&faiss_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 
 	/* Register Faiss Class */
-	INIT_CLASS_ENTRY(ce, "Croco\\FAISS\\Index", php_faiss_class_methods);
+	INIT_CLASS_ENTRY(ce, "Croco\\faiss", php_faiss_class_methods);
 	ce.create_object = php_faiss_object_new;
 	faiss_object_handlers.offset = XtOffsetOf(php_faiss_object, zo);
 	faiss_object_handlers.clone_obj = NULL;
 	faiss_object_handlers.free_obj = php_faiss_object_free_storage;
 	php_faiss_sc_entry = zend_register_internal_class(&ce);
+
+	REGISTER_LONG_CONSTANT("Croco\\faiss\\METRIC_INNER_PRODUCT", 0, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("Croco\\faiss\\METRIC_L2",            1, CONST_CS | CONST_PERSISTENT);
 
 	REGISTER_INI_ENTRIES();
 

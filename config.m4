@@ -43,5 +43,5 @@ if test "$PHP_FAISS" != "no"; then
   CFLAGS="-O3 -funroll-loops"
   CXXFLAGS="-pthread -std=c++14 -O3 -funroll-loops"
 
-  PHP_NEW_EXTENSION(faiss, php_faiss.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  PHP_NEW_EXTENSION(faiss, faiss_api.cc php_faiss.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 fi

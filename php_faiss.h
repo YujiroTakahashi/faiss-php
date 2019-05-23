@@ -8,6 +8,9 @@
 #include "faiss/Clustering_c.h"
 #include "faiss/AutoTune_c.h"
 
+#include "faiss_api.h"
+
+
 #define PHP_FAISS_VERSION	"0.1.0"
 
 #define FAISS_C_IO_FLAG_MMAP 1
