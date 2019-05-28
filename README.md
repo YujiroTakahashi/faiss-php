@@ -42,12 +42,17 @@ extension=faiss.so
 
 ```php
 Croco\faiss {
+	const METRIC_INNER_PRODUCT = 0;
+	const METRIC_L2            = 1;
+	const FORMAT_PLAIN         = 1;
+	const FORMAT_STATS         = 2;
+
     public __construct(int dimension[, string description, int metric])
     public boolean isTrained(voiod)
-    public void add(int number, array vectors)
-    public void addWithIds(int number, array vectors, array ids)
+    public void add(array vectors[, int number])
+    public void addWithIds(array vectors, array ids[, int number])
     public int ntotal(void)
-    public array search(int number, array query, int k)
+    public array search(array query[, int k, int format, int number])
     public void reset(void)
     public void reconstruct(int key, array recons)
     public void writeIndex(string filename)
@@ -96,7 +101,7 @@ var_dump($res);
 
 -----
 
-### <a name="add">void Croco::faiss::add(int number, array data)
+### <a name="add">void Croco::faiss::add(array data[, int number])
 
 Add n vectors of dimension d to the index.
 
@@ -112,20 +117,22 @@ $vectors = [
 ];
 
 $object_number = 12;  // count($vectors) / dimension
-$index->add($object_number, $vectors);
+$index->add($vectors, $object_number);
 ```
 
 
-### <a name="addwithids">void Croco::faiss::addWithIds(int number, array vectors, array ids)
+### <a name="addwithids">void Croco::faiss::addWithIds(array vectors, array ids[, int number])
 
 Same as add, but stores xids instead of sequential ids.
 
 ```php
 $index = new Croco\faiss(100, 'IDMap,Flat');
 $vectors = [
-    0.0200351,0.0941662,0.0324461,0.0755379, ......
-    -0.0134401,0.00689783,0.0361747,-0.0180336, ......
-    0.0744146,0.0417511,-0.0769202,0.0227152, ......
+    [
+        0.0200351,0.0941662,0.0324461,0.0755379, ......
+        -0.0134401,0.00689783,0.0361747,-0.0180336, ......
+        0.0744146,0.0417511,-0.0769202,0.0227152, ......
+    ],
                     :
                     :
                     :
@@ -134,9 +141,7 @@ $ids = [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 ];
 
-$object_number = 12;  // count($vectors) / dimension
-
-$index->addWithIds($object_number, $vectors, $ids);
+$index->addWithIds($vectors, $ids);
 ```
 
 -----
@@ -154,7 +159,7 @@ echo $index->ntotal();
 
 -----
 
-### <a name="search">void Croco::faiss::search()
+### <a name="search">void Croco::faiss::search(array query[, int k, int format, int number])
 
 ```php
 $index = new Croco\faiss(100, 'IDMap,Flat');
@@ -172,19 +177,21 @@ $ids = [
 
 $object_number = 12;  // count($vectors) / dimension
 
-$index->addWithIds($object_number, $vectors, $ids);
+$index->addWithIds($vectors, $ids, $object_number);
 
 
 $query = [
-    0.0744146,0.0417511,-0.0769202,0.0227152, ......
-    0.0134917,0.00398968,-0.0516475,0.0694875, ......
-    -0.0531141,0.0319203,0.0229972,-0.0412282, ......
+    [
+        0.0744146,0.0417511,-0.0769202,0.0227152, ......
+        0.0134917,0.00398968,-0.0516475,0.0694875, ......
+        -0.0531141,0.0319203,0.0229972,-0.0412282, ......
+    ],
                     :
                     :
                     :
 ];
 
-$res = $index->search(1, $query, 5);
+$res = $index->search($query, 5);
 print_r($res);
 ```
 
@@ -217,6 +224,63 @@ print_r($res);
     ]
 ]
 ```
+
+
+```php
+$index = new Croco\faiss(100, 'IDMap,Flat');
+$index->loadIndex('sample.idx');
+
+$query = [
+    [
+        0.0744146,0.0417511,-0.0769202,0.0227152, ......
+        0.0134917,0.00398968,-0.0516475,0.0694875, ......
+        -0.0531141,0.0319203,0.0229972,-0.0412282, ......
+    ],
+                    :
+                    :
+                    :
+];
+
+
+$res = $index->search($query, 3, Croco\faiss\FORMAT_STATS);
+print_r($res);
+```
+
+```
+[
+    [0] => [
+        [Rank] => 1
+        [ID] => 3
+        [Count] => 1
+        [Distance] => 0
+    ],
+    [1] => [
+        [Rank] => 2
+        [ID] => 7
+        [Count] => 1
+        [Distance] => 0.023740146309137
+    ],
+    [2] => [
+        [Rank] => 3
+        [ID] => 4
+        [Count] => 1
+        [Distance] => 0.02716763317585
+    ],
+    [3] => [
+        [Rank] => 4
+        [ID] => 6
+        [Count] => 2
+        [Distance] => 0.062233626842499
+    ],
+    [4] => [
+        [Rank] => 5
+        [ID] => 5
+        [Count] => 1
+        [Distance] => 0.12547266483307
+    ]
+]
+```
+
 -----
 
 ### <a name="reset">array Croco::faiss::reset()
@@ -265,7 +329,7 @@ $vectors = [
 
 $object_number = 12;  // count($vectors) / dimension
 
-$index->add($object_number, $vectors);
+$index->add($vectors, $object_number);
 
 $index->writeIndex('index');
 ```
@@ -287,7 +351,7 @@ $query = [
                     :
 ];
 
-$res = $index->search(1, $query, 5);
+$res = $index->search($query, 5, Croco\faiss\FORMAT_PLAIN, 1);
 ```
 
 
@@ -308,15 +372,17 @@ $index = new Croco\faiss(100, 'IDMap');
 $index->importIndex($data);
 
 $query = [
-    0.0744146,0.0417511,-0.0769202,0.0227152, ......
-    0.0134917,0.00398968,-0.0516475,0.0694875, ......
-    -0.0531141,0.0319203,0.0229972,-0.0412282, ......
+    [
+        0.0744146,0.0417511,-0.0769202,0.0227152, ......
+        0.0134917,0.00398968,-0.0516475,0.0694875, ......
+        -0.0531141,0.0319203,0.0229972,-0.0412282, ......
+    ],
                     :
                     :
                     :
 ];
 
-$res = $index->search(1, $query, 5);
+$res = $index->search($query, 5);
 
 ```
 
@@ -333,16 +399,16 @@ $db = new \PDO(......);
 
 $index = new Croco\faiss(100, 'Flat');
 $vectors = [
-    0.0200351,0.0941662,0.0324461,0.0755379, ......
-    -0.0134401,0.00689783,0.0361747,-0.0180336, ......
-    0.0744146,0.0417511,-0.0769202,0.0227152, ......
+    [
+        0.0200351,0.0941662,0.0324461,0.0755379, ......
+        -0.0134401,0.00689783,0.0361747,-0.0180336, ......
+        0.0744146,0.0417511,-0.0769202,0.0227152, ......
+    ],
                     :
                     :
                     :
 ];
-
-$object_number = 12;  // count($vectors) / dimension
-$index->add($object_number, $vectors);
+$index->add($vectors);
 
 
 $stmt = $db->prepare('INSERT INTO `faiss` (`index`)VALUES(:index)');
