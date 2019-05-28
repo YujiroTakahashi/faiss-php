@@ -23,7 +23,19 @@ extern "C" {
 #    define EXPLOSION_VERSION 1
 #endif /* EXPLOSION_VERSION */
 
+typedef struct _stats {
+    int id;
+    int count;
+    float distance;
+#ifdef __cplusplus
+    bool operator<(const struct _stats &stats) const  {
+        return distance > stats.distance;
+    }
+#endif /* __cplusplus */
+} stats_t;
+
 EXPLOSION_API int FaissIndexSize();
+EXPLOSION_API stats_t *FaissStatsFormat(float *distances, long *labels, size_t *size);
 
 #ifdef __cplusplus
 }

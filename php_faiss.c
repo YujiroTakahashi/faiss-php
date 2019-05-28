@@ -41,13 +41,13 @@ PHP_METHOD(faiss, __construct)
 	char *default_desc = "Flat";
 	zend_long metric = METRIC_L2;
 
-	faiss_obj = Z_FAISS_P(object);
-
 	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "l|sl", 
 			&dimension, &description, &description_len, &metric)
 	) {
 		return;
 	}
+
+	faiss_obj = Z_FAISS_P(object);
 
 	if (0 == description_len) {
 		description = default_desc;
@@ -65,11 +65,11 @@ PHP_METHOD(faiss, isTrained)
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
 
-	faiss_obj = Z_FAISS_P(object);
-
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
+
+	faiss_obj = Z_FAISS_P(object);
 
 	if (!faiss_Index_is_trained(faiss_obj->faiss)) {
 		RETURN_FALSE;
@@ -78,24 +78,48 @@ PHP_METHOD(faiss, isTrained)
 }
 /* }}} */
 
-/* {{{ proto string faiss::add(int number, array data)
+/* {{{ proto string faiss::add(array data, int number)
  */
 PHP_METHOD(faiss, add)
 {
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
-	zend_long number;
+	zend_long number = 0;
 	zval *array;
+	float *xb;
 
-	faiss_obj = Z_FAISS_P(object);
-
-	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "lz", &number, &array)) {
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "z|l", &array, &number)) {
 		return;
 	}
 
-	if (Z_TYPE_P(array) == IS_ARRAY) {
-		float *xb;
-		int idx, size;
+	if (Z_TYPE_P(array) != IS_ARRAY) {
+		return ;
+	}
+
+	faiss_obj = Z_FAISS_P(object);
+
+	if (0 == number) {
+		HashTable *oht = Z_ARRVAL_P(array);
+		size_t idx = 0, oidx;
+		number = zend_hash_num_elements(oht);
+
+		xb = malloc(faiss_obj->dimension * number * sizeof(float));
+
+		for (oidx=0; oidx<number; oidx++) {
+			zval *vecs = zend_hash_get_current_data(oht);
+			HashTable *vht = Z_ARRVAL_P(vecs);
+			size_t vidx;
+
+			for (vidx=0; vidx<faiss_obj->dimension; vidx++) {
+				zval *value = zend_hash_get_current_data(vht);
+				xb[idx] = (float) zval_get_double(value);
+				idx++;
+				zend_hash_move_forward(vht);
+			}
+			zend_hash_move_forward(oht);
+		}
+	} else {
+		size_t idx, size;
 		HashTable *ht = Z_ARRVAL_P(array);
 		size = zend_hash_num_elements(ht);
 
@@ -105,35 +129,55 @@ PHP_METHOD(faiss, add)
 			xb[idx] = (float) zval_get_double(value);
 			zend_hash_move_forward(ht);
 		}
-
-		FAISS_TRY(faiss_Index_add(faiss_obj->faiss, number, xb));
-		free(xb);
 	}
+
+	FAISS_TRY(faiss_Index_add(faiss_obj->faiss, number, xb));
+	free(xb);
 }
 /* }}} */
 
-/* {{{ proto string faiss::addWithIds(int number, array dists, array ids)
+/* {{{ proto string faiss::addWithIds(array dists, array ids, int number)
  */
 PHP_METHOD(faiss, addWithIds)
 {
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
-	zend_long number;
+	zend_long number = 0;
 	zval *distVal, *labelVal;
 	float *x;
 	long *xids;
 
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "zz|l", &distVal, &labelVal, &number)) {
+		return;
+	}
+	if (Z_TYPE_P(distVal) != IS_ARRAY) {
+		return;
+	}
+
 	faiss_obj = Z_FAISS_P(object);
 
-	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "lzz", &number, &distVal, &labelVal)) {
-		return;
-	}
-	if (Z_TYPE_P(distVal) != IS_ARRAY || Z_TYPE_P(labelVal) != IS_ARRAY) {
-		return;
-	}
+	if (0 == number) {
+		HashTable *oht = Z_ARRVAL_P(distVal);
+		size_t idx = 0, oidx;
+		number = zend_hash_num_elements(oht);
 
-	{
-		int idx, size;
+		x = malloc(faiss_obj->dimension * number * sizeof(float));
+
+		for (oidx=0; oidx<number; oidx++) {
+			zval *vecs = zend_hash_get_current_data(oht);
+			HashTable *vht = Z_ARRVAL_P(vecs);
+			size_t vidx;
+
+			for (vidx=0; vidx<faiss_obj->dimension; vidx++) {
+				zval *value = zend_hash_get_current_data(vht);
+				x[idx] = (float) zval_get_double(value);
+				idx++;
+				zend_hash_move_forward(vht);
+			}
+			zend_hash_move_forward(oht);
+		}
+	} else {
+		size_t idx, size;
 		HashTable *ht = Z_ARRVAL_P(distVal);
 		size = zend_hash_num_elements(ht);
 
@@ -145,8 +189,8 @@ PHP_METHOD(faiss, addWithIds)
 		}
 	}
 
-	{
-		int idx, size;
+	if (Z_TYPE_P(labelVal) == IS_ARRAY) {
+		size_t idx, size;
 		HashTable *ht = Z_ARRVAL_P(labelVal);
 		size = zend_hash_num_elements(ht);
 
@@ -155,6 +199,13 @@ PHP_METHOD(faiss, addWithIds)
 			zval *value = zend_hash_get_current_data(ht);
 			xids[idx] = (long) zval_get_long(value);
 			zend_hash_move_forward(ht);
+		}
+	} else {
+		size_t idx;
+		xids = malloc(number * sizeof(long));
+
+		for (idx=0; idx<number; idx++) {
+			xids[idx] = (long) zval_get_long(labelVal);
 		}
 	}
 
@@ -171,33 +222,30 @@ PHP_METHOD(faiss, ntotal)
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
 
-	faiss_obj = Z_FAISS_P(object);
-
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
+
+	faiss_obj = Z_FAISS_P(object);
 	ZVAL_LONG(return_value, faiss_Index_ntotal(faiss_obj->faiss));
 }
 /* }}} */
 
 
-/* {{{ proto array faiss::search(int number, array query, int k)
+/* {{{ proto array faiss::search(array query[, int k, int format, int number])
  */
 PHP_METHOD(faiss, search)
 {
 	php_faiss_object *faiss_obj;
 	zval *object = getThis();
-	zend_long number;
+	zend_long number = 0;
 	zval *array;
-	HashTable *ht;
 	zend_long k = 5;
-	int idx, size;
+	zend_long format = FAISS_C_FORMAT_PLAIN;
 	long *labels;
 	float *distances, *query;
 
-	faiss_obj = Z_FAISS_P(object);
-
-	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "lzl", &number, &array, &k)) {
+	if (FAILURE == zend_parse_parameters_throw(ZEND_NUM_ARGS(), "z|lll", &array, &k, &format, &number)) {
 		return;
 	}
 
@@ -205,23 +253,47 @@ PHP_METHOD(faiss, search)
 		return;
 	}
 
-	ht = Z_ARRVAL_P(array);
-	size = zend_hash_num_elements(ht);
+	faiss_obj = Z_FAISS_P(object);
 
-	query = malloc(size * sizeof(float));
-	for (idx=0; idx<size; idx++) {
-		zval *value = zend_hash_get_current_data(ht);
-		query[idx] = (float) zval_get_double(value);
-		zend_hash_move_forward(ht);
+	if (0 == number) {
+		HashTable *oht = Z_ARRVAL_P(array);
+		size_t idx = 0, oidx;
+		number = zend_hash_num_elements(oht);
+
+		query = malloc(faiss_obj->dimension * number * sizeof(float));
+
+		for (oidx=0; oidx<number; oidx++) {
+			zval *vecs = zend_hash_get_current_data(oht);
+			HashTable *vht = Z_ARRVAL_P(vecs);
+			size_t vidx;
+
+			for (vidx=0; vidx<faiss_obj->dimension; vidx++) {
+				zval *value = zend_hash_get_current_data(vht);
+				query[idx] = (float) zval_get_double(value);
+				idx++;
+				zend_hash_move_forward(vht);
+			}
+			zend_hash_move_forward(oht);
+		}
+	} else {
+		HashTable *ht = Z_ARRVAL_P(array);
+		size_t idx, size = zend_hash_num_elements(ht);
+
+		query = malloc(size * sizeof(float));
+		for (idx=0; idx<size; idx++) {
+			zval *value = zend_hash_get_current_data(ht);
+			query[idx] = (float) zval_get_double(value);
+			zend_hash_move_forward(ht);
+		}
 	}
 
 	array_init(return_value);
-	{
-		labels = malloc(k * number * sizeof(long));
-		distances = malloc(k * number * sizeof(float));
-		FAISS_TRY(faiss_Index_search(faiss_obj->faiss, number, query, k, distances, labels));
-		size = k * number;
+	labels = malloc(k * number * sizeof(long));
+	distances = malloc(k * number * sizeof(float));
+	FAISS_TRY(faiss_Index_search(faiss_obj->faiss, number, query, k, distances, labels));
 
+	if (FAISS_C_FORMAT_PLAIN == format) {
+		size_t idx, size = k * number;
 		for (idx=0; idx<size; idx++) {
 			zval rowVal, rankVal, distVal, labelVal;
 
@@ -236,7 +308,31 @@ PHP_METHOD(faiss, search)
 
 			add_index_zval(return_value, idx, &rowVal);
 		}
+	} else {
+		size_t idx, size = k * number;
+		stats_t *stats = FaissStatsFormat(distances, labels, &size);
+		for (idx=0; idx<size; idx++) {
+			zval rowVal, rankVal, countVal, distVal, labelVal;
+
+			ZVAL_LONG(&rankVal, idx + 1);
+			ZVAL_LONG(&labelVal, stats[idx].id);
+			ZVAL_LONG(&countVal, stats[idx].count);
+			ZVAL_DOUBLE(&distVal, stats[idx].distance);
+
+			array_init(&rowVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "Rank", sizeof("Rank")-1, &rankVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "ID", sizeof("ID")-1, &labelVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "Count", sizeof("Count")-1, &countVal);
+			zend_hash_str_add(Z_ARRVAL_P(&rowVal), "Distance", sizeof("Distance")-1, &distVal);
+
+			add_index_zval(return_value, idx, &rowVal);
+		}
+		free(stats);
 	}
+
+	free(distances);
+	free(labels);
+	free(query);
 }
 /* }}} */
 
@@ -395,21 +491,22 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_ctor, 0, 0, 1)
 	ZEND_ARG_INFO(0, metric)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_vector, 0, 0, 2)
-	ZEND_ARG_INFO(0, number)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_vector, 0, 0, 1)
 	ZEND_ARG_INFO(0, data)
+	ZEND_ARG_INFO(0, number)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_addwids, 0, 0, 3)
-	ZEND_ARG_INFO(0, number)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_addwids, 0, 0, 2)
 	ZEND_ARG_INFO(0, data)
 	ZEND_ARG_INFO(0, ids)
+	ZEND_ARG_INFO(0, number)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_search, 0, 0, 3)
-	ZEND_ARG_INFO(0, number)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_search, 0, 0, 1)
 	ZEND_ARG_INFO(0, query)
 	ZEND_ARG_INFO(0, k)
+	ZEND_ARG_INFO(0, format)
+	ZEND_ARG_INFO(0, number)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_faiss_file, 0, 0, 1)
@@ -495,6 +592,8 @@ PHP_MINIT_FUNCTION(faiss)
 
 	REGISTER_LONG_CONSTANT("Croco\\faiss\\METRIC_INNER_PRODUCT", 0, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("Croco\\faiss\\METRIC_L2",            1, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("Croco\\faiss\\FORMAT_PLAIN",         1, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("Croco\\faiss\\FORMAT_STATS",         2, CONST_CS | CONST_PERSISTENT);
 
 	REGISTER_INI_ENTRIES();
 

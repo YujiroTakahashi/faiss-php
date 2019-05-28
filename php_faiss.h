@@ -17,6 +17,10 @@
 #define FAISS_C_IO_FLAG_READ_ONLY 2
 #define FAISS_C_IO_FLAG_ONDISK_SAME_DIR 4
 
+#define FAISS_C_FORMAT_PLAIN 1
+#define FAISS_C_FORMAT_STATS 2
+
+
 #define FAISS_TRY(C)                                       \
     {                                                      \
         if (C) {                                           \
