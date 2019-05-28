@@ -42,10 +42,10 @@ extension=faiss.so
 
 ```php
 Croco\faiss {
-	const METRIC_INNER_PRODUCT = 0;
-	const METRIC_L2            = 1;
-	const FORMAT_PLAIN         = 1;
-	const FORMAT_STATS         = 2;
+    const METRIC_INNER_PRODUCT = 0;
+    const METRIC_L2            = 1;
+    const FORMAT_PLAIN         = 1;
+    const FORMAT_STATS         = 2;
 
     public __construct(int dimension[, string description, int metric])
     public boolean isTrained(voiod)
