@@ -120,6 +120,8 @@ $object_number = 12;  // count($vectors) / dimension
 $index->add($vectors, $object_number);
 ```
 
+-----
+
 
 ### <a name="addwithids">void Croco::faiss::addWithIds(array vectors, array ids[, int number])
 
@@ -416,6 +418,7 @@ $stmt->bindValue(':index', $index->exportIndex(), \PDO::PARAM_LOB);
 $stmt->execute();
 ```
 
+-----
 
 #### Create Table
 ```sql
