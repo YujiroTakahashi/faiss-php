@@ -4,6 +4,8 @@ faiss-php is a PHP bindings for faiss.
 
 [faiss](https://github.com/facebookresearch/faiss) A library for efficient similarity search and clustering of dense vectors.
 
+-----
+
 ## Requirements
 
 libfaiss / libfaiss_c
@@ -22,6 +24,8 @@ $ sudo cp ./libfaiss_c.so /usr/local/lib/
 $ sudo ldconfig
 ```
 
+-----
+
 ## Building faiss for PHP
 
 ```
@@ -37,6 +41,8 @@ edit your php.ini and add:
 ```
 extension=faiss.so
 ```
+
+-----
 
 ## Class synopsis
 
@@ -75,6 +81,8 @@ Croco\faiss {
 * [Croco::faiss::readIndex](#readindex)
 * [Croco::faiss::importIndex](#importindex)
 * [Croco::faiss::exportIndex](#exportindex)
+-----
+
 -----
 
 ### <a name="__construct">Croco::faiss::__construct(int dimension[, string description, int metric])
