@@ -67,6 +67,7 @@ Croco\faiss {
     public string exportIndex(void)
 }
 ```
+-----
 
 ## Table of Contents
 * [Croco::faiss::__construct](#__construct)
@@ -81,7 +82,6 @@ Croco\faiss {
 * [Croco::faiss::readIndex](#readindex)
 * [Croco::faiss::importIndex](#importindex)
 * [Croco::faiss::exportIndex](#exportindex)
------
 
 -----
 
