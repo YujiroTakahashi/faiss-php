@@ -314,6 +314,8 @@ $recons = [
 $index->reconstruct(3, $recons);
 ```
 
+-----
+
 ### <a name="writeindex">void Croco::faiss::writeIndex(string filename)
 
 Write index to a file.
