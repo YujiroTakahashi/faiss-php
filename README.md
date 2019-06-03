@@ -338,6 +338,8 @@ $index->add($vectors, $object_number);
 $index->writeIndex('index');
 ```
 
+-----
+
 ### <a name="readindex">void Croco::faiss::readIndex(string filename)
 
 Read index from a file.
@@ -357,6 +359,8 @@ $query = [
 
 $res = $index->search($query, 5, Croco\faiss\FORMAT_PLAIN, 1);
 ```
+
+-----
 
 
 ### <a name="importindex">void Croco::faiss::importIndex(string indexdata)
